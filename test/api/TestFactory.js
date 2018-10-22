@@ -294,7 +294,6 @@ window.TestFactory.prototype.exposeUserActors = function() {
         TestFactory.self_repository,
         TestFactory.serverTimeRepository
       );
-      TestFactory.user_repository.save_user(TestFactory.client_repository.selfUser(), true);
 
       return TestFactory.user_repository;
     });

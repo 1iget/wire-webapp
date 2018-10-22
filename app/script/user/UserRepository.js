@@ -163,7 +163,7 @@ z.user.UserRepository = class UserRepository {
    * @returns {undefined} No return value
    */
   onUserDelete({id: userId}) {
-    const isSelfUser = userId === this.self().id;
+    const isSelfUser = userId === this.selfUser().id;
     if (!isSelfUser) {
       this.logger.info(`Remote user '${userId}' was deleted`);
     }
@@ -175,7 +175,7 @@ z.user.UserRepository = class UserRepository {
    * @returns {Promise} Resolves wit the updated user entity
    */
   onUserUpdate({user: userData}) {
-    const isSelfUser = userData.id === this.self().id;
+    const isSelfUser = userData.id === this.selfUser().id;
     if (!isSelfUser) {
       return this.get_user_by_id(userData.id).then(userEntity => {
         return this.user_mapper.updateUserFromObject(userEntity, userData);
@@ -425,24 +425,18 @@ z.user.UserRepository = class UserRepository {
     if (!_.isString(user_id)) {
       user_id = user_id.id;
     }
-    return this.sel().id === user_id;
+    return this.selfUser().id === user_id;
   }
 
   /**
    * Is the user the logged in user.
    * @param {z.entity.User|string} user_et - User entity or user ID
-   * @param {boolean} is_me - True, if self user
    * @returns {Promise} Resolves with the user entity
    */
-  save_user(user_et, is_me = false) {
+  save_user(user_et) {
     return this.findUserById(user_et.id).catch(error => {
       if (error.type !== z.error.UserError.TYPE.USER_NOT_FOUND) {
         throw error;
-      }
-
-      if (is_me) {
-        user_et.is_me = true;
-        this.selfUser(user_et);
       }
       this.users.push(user_et);
       return user_et;
@@ -528,12 +522,12 @@ z.user.UserRepository = class UserRepository {
 
     return Promise.resolve()
       .then(() => {
-        suggestions = z.user.UserHandleGenerator.create_suggestions(this.self().name());
+        suggestions = z.user.UserHandleGenerator.create_suggestions(this.selfUser().name());
         return this.verify_usernames(suggestions);
       })
-      .then(valid_suggestions => {
+      .then(([validSuggestion]) => {
         this.should_set_username = true;
-        this.self().username(valid_suggestions[0]);
+        this.selfUser().username(validSuggestion);
       })
       .catch(error => {
         if (error.code === z.error.BackendClientError.STATUS_CODE.NOT_FOUND) {
