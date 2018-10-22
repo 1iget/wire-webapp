@@ -23,6 +23,12 @@ window.z = window.z || {};
 window.z.user = z.user || {};
 
 z.user.UserRepository = class UserRepository {
+  static get CONFIG() {
+    return {
+      SUPPORTED_EVENTS: [z.event.Backend.USER.AVAILABILITY, z.event.Backend.USER.DELETE, z.event.Backend.USER.UPDATE],
+    };
+  }
+
   /**
    * Construct a new User repository.
    * @class z.user.UserRepository
@@ -79,27 +85,32 @@ z.user.UserRepository = class UserRepository {
   /**
    * Listener for incoming user events.
    *
-   * @param {Object} event_json - JSON data for event
+   * @param {Object} eventJson - JSON data for event
    * @param {z.event.EventRepository.SOURCE} source - Source of event
    * @returns {undefined} No return value
    */
-  on_user_event(event_json, source) {
-    const {type} = event_json;
+  onUserEvent(eventJson, source) {
+    const eventType = eventJson.type;
+    const isSupportedEvent = UserRepository.CONFIG.SUPPORTED_EVENTS.includes(eventType);
 
-    const logObject = {eventJson: JSON.stringify(event_json), eventObject: event_json};
-    this.logger.info(`»» User Event: '${type}' (Source: ${source})`, logObject);
+    if (isSupportedEvent) {
+      const logObject = {eventJson: JSON.stringify(eventJson), eventObject: eventJson};
+      this.logger.info(`»» User Event: '${eventType}' (Source: ${source})`, logObject);
 
-    switch (type) {
-      case z.event.Backend.USER.DELETE:
-        this.onUserDelete(event_json);
-        break;
-      case z.event.Backend.USER.UPDATE:
-        this.user_update(event_json);
-        break;
-      case z.event.Client.USER.AVAILABILITY:
-        this.onUserAvailability(event_json);
-        break;
-      default:
+      const isUserAvailability = eventType === z.event.Backend.USER.AVAILABILITY;
+      if (isUserAvailability) {
+        return this.onUserAvailability(eventJson);
+      }
+
+      const isUserDelete = eventType === z.event.Backend.USER.DELETE;
+      if (isUserDelete) {
+        return this.onUserDelete(eventJson);
+      }
+
+      const isUserUpdate = eventType === z.event.Backend.USER.UPDATE;
+      if (isUserUpdate) {
+        return this.onUserUpdate(eventJson);
+      }
     }
   }
 
@@ -132,18 +143,6 @@ z.user.UserRepository = class UserRepository {
   }
 
   /**
-   * Event to delete the matching user.
-   * @param {string} id - User ID of deleted user
-   * @returns {undefined} No return value
-   */
-  onUserDelete({id: userId}) {
-    const isSelfUser = userId === this.self().id;
-    if (!isSelfUser) {
-      this.logger.info(`Remote user '${userId}' was deleted`);
-    }
-  }
-
-  /**
    * Event to update availability of user.
    * @param {Object} event - Event data
    * @returns {undefined} No return value
@@ -155,6 +154,18 @@ z.user.UserRepository = class UserRepository {
         data: {availability},
       } = event;
       this.get_user_by_id(userId).then(userEntity => userEntity.availability(availability));
+    }
+  }
+
+  /**
+   * Event to delete the matching user.
+   * @param {string} id - User ID of deleted user
+   * @returns {undefined} No return value
+   */
+  onUserDelete({id: userId}) {
+    const isSelfUser = userId === this.self().id;
+    if (!isSelfUser) {
+      this.logger.info(`Remote user '${userId}' was deleted`);
     }
   }
 
