@@ -272,7 +272,7 @@ window.TestFactory.prototype.exposeSelfActors = function() {
       TestFactory.self_repository = new z.self.SelfRepository(TestFactory.self_service, TestFactory.asset_service);
       TestFactory.self_repository.setSelfUser(TestFactory.client_repository.selfUser());
 
-      return TestFactory.user_repository;
+      return TestFactory.self_repository;
     });
 };
 
